@@ -1,0 +1,33 @@
+{
+  "name": "ssg-starter",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:frontend": "yarn workspace frontend dev",
+    "start:frontend": "yarn workspace frontend start",
+    "build:frontend": "yarn build:common && yarn workspace frontend build",
+    "dev:backend": "yarn workspace backend start:dev",
+    "start:backend": "yarn workspace backend start",
+    "build:backend": "yarn build:common && yarn workspace backend build",
+    "build:all": "yarn workspace backend build && yarn workspace frontend build",
+    "lint": "yarn workspaces run lint",
+    "format": "yarn workspaces run format",
+    "nest": "yarn workspace backend nest",
+    "cn": "yarn workspace frontend cn",
+    "docker:up": "docker compose up --build --force-recreate",
+    "docker:down": "docker compose down -v",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "eslint": "^8.42.0",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "prettier-plugin-embed": "^0.4.15",
+    "prettier-plugin-sql": "^0.18.1"
+  },
+  "dependencies": {}
+}
