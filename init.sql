@@ -1,47 +1,48 @@
--- init.sql
--- This script will be executed automatically when the PostgreSQL container is first created.
--- Use this file to initialize your database schema, create tables, insert initial data, etc.
--- Create a sample table
+-- Initialize the Users Table
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
-  username VARCHAR(50) UNIQUE NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
+  name VARCHAR(50) NOT NULL,
+  password VARCHAR(255) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert some sample data
-INSERT INTO
-  users (username, email)
-VALUES
-  ('john_doe', 'john@example.com'),
-  ('jane_smith', 'jane@example.com')
-ON CONFLICT (username) DO NOTHING;
+-- Insert sample users with hashed passwords
+-- Note: Replace 'hashed_password_here' with actual bcrypt-hashed passwords
+INSERT INTO users (email, name, password)
+VALUES 
+  ('john@example.com', 'John Doe', 'hashed_password_here'),
+  ('jane@example.com', 'Jane Smith', 'hashed_password_here')
+ON CONFLICT (email) DO NOTHING;
 
--- Create another sample table
-CREATE TABLE IF NOT EXISTS posts (
+-- Initialize the Tasks Table
+CREATE TABLE IF NOT EXISTS tasks (
   id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users (id),
-  title VARCHAR(100) NOT NULL,
-  content TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  description TEXT NOT NULL,
+  completed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert sample posts
-INSERT INTO
-  posts (user_id, title, content)
+-- Initialize the Task_Owners Table for many-to-many relationship between users and tasks
+CREATE TABLE IF NOT EXISTS task_owners (
+  task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (task_id, user_id)
+);
+
+-- Insert sample tasks
+INSERT INTO tasks (description, completed)
 VALUES
-  (
-    1,
-    'First Post',
-    'This is the content of the first post.'
-  ),
-  (
-    2,
-    'Introduction',
-    'Hello, this is my first post on the platform!'
-  )
+  ('Complete the project documentation', FALSE),
+  ('Review the new project proposal', TRUE)
 ON CONFLICT DO NOTHING;
 
--- Add any other initialization SQL statements here
--- For example: creating more tables, inserting initial data, setting up functions or triggers, etc.
--- Remember to replace these placeholder examples with your actual schema and initial data as needed.
+-- Insert sample task-owner relationships
+-- Assuming user with id 1 owns both tasks for illustration
+INSERT INTO task_owners (task_id, user_id)
+VALUES
+  (1, 1),
+  (2, 1)
+ON CONFLICT DO NOTHING;
+
