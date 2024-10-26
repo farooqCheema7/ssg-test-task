@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
 -- Note: Replace 'hashed_password_here' with actual bcrypt-hashed passwords
 INSERT INTO users (email, name, password)
 VALUES 
-  ('john@example.com', 'John Doe', 'hashed_password_here'),
-  ('jane@example.com', 'Jane Smith', 'hashed_password_here')
+  ('john@example.com', 'John Doe', 'password_john'),
+  ('jane@example.com', 'Jane Smith', 'password_jane')
 ON CONFLICT (email) DO NOTHING;
 
 -- Initialize the Tasks Table
