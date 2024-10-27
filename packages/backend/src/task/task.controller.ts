@@ -1,63 +1,84 @@
+// task.controller.ts
 import {
-  Body,
   Controller,
-  Delete,
   Get,
-  Param,
-  Patch,
   Post,
+  Patch,
+  Delete,
+  Body,
+  Req,
+  UseGuards,
+  InternalServerErrorException,
   Query,
-  UnauthorizedException,
+  Param,
+  BadRequestException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { TaskService } from './task.service';
-import { TaskWithOwners } from './task.types';
+import { Request } from 'express';
+import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 
-@Controller('tasks') // Base route for tasks
+@Controller('tasks')
+@UseGuards(JwtAuthGuard)
 export class TaskController {
-  constructor(private readonly taskService: TaskService) {}
+  constructor(
+    private readonly taskService: TaskService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  private extractUserIdFromToken(req: Request): number {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      throw new InternalServerErrorException('Authorization header missing');
+    }
+    const token = authHeader.split(' ')[1];
+    const decoded = this.jwtService.decode(token) as { id: number };
+    return decoded.id;
+  }
 
   @Get()
-  async getAllTasks(@Query('userId') userId?: number) {
-    return await this.taskService.getTasks(userId ? Number(userId) : undefined);
+  async getTasks(
+    @Req() req: Request,
+    @Query('ownedOnly') ownedOnly: string, // Query parameter for conditional fetching
+  ) {
+    const userId = this.extractUserIdFromToken(req);
+    const fetchOwnedOnly = ownedOnly === 'true'; // Convert query param to boolean
+    return this.taskService.getTasks(fetchOwnedOnly ? userId : undefined);
   }
 
   @Post()
   async createTask(
-    @Body('description') description: string,
-    @Body('ownerIds') ownerIds: number[],
-  ): Promise<TaskWithOwners> {
-    return await this.taskService.createTask(description, ownerIds);
+    @Body() body: { description: string; ownerIds: number[] },
+    @Req() req: Request,
+  ) {
+    const userId = this.extractUserIdFromToken(req);
+    if (!body.ownerIds.includes(userId)) {
+      body.ownerIds.push(userId); // Ensure the user is one of the task owners
+    }
+    return this.taskService.createTask(body.description, body.ownerIds);
   }
 
   @Patch(':id')
   async updateTaskStatus(
-    @Param('id') taskId: number,
-    @Query('userId') userId: number, // will update this with jwt token user id
-    @Body('completed') completed: boolean, // Get new completed status from request body
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Body() body: { completed: boolean },
   ) {
-    try {
-      return await this.taskService.updateTaskStatus(taskId, userId, completed);
-    } catch (error: any) {
-      if (error.message === 'User is not authorized to update this task') {
-        throw new UnauthorizedException(error.message);
-      }
-      throw error;
-    }
+    const userId = this.extractUserIdFromToken(req);
+    return this.taskService.updateTaskStatus(
+      parseInt(id, 10),
+      userId,
+      body.completed,
+    );
   }
 
-  @Delete(':id')
-  async deleteTask(
-    @Param('id') taskId: number, // will update this with jwt token user id
-    @Query('userId') userId: number,
-  ) {
-    // Call the deleteTask method in TaskService and handle unauthorized cases
-    try {
-      return await this.taskService.deleteTask(taskId, userId);
-    } catch (error: any) {
-      if (error.message === 'User is not authorized to delete this task') {
-        throw new UnauthorizedException(error.message);
-      }
-      throw error;
+  @Delete(':id') // Ensure :id is specified here
+  async deleteTask(@Param('id') id: string, @Req() req: Request) {
+    const userId = this.extractUserIdFromToken(req);
+    const taskId = parseInt(id, 10); // Parse the ID as an integer
+    if (isNaN(taskId)) {
+      throw new BadRequestException('Invalid task ID'); // Optional: Handle invalid ID
     }
+    return this.taskService.deleteTask(taskId, userId);
   }
 }

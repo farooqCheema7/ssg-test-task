@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import postgres from 'postgres';
 import { Task, TaskWithOwners } from './task.types';
+
 @Injectable()
 export class TaskService {
   private sql;
@@ -18,29 +19,15 @@ export class TaskService {
   // Retrieve tasks, optionally filtering by userId
   async getTasks(userId?: number): Promise<TaskWithOwners[]> {
     try {
-      let tasks;
-      if (userId) {
-        console.log('Fetching tasks for userId:', userId);
-        tasks = await this.sql`
-          SELECT t.id, t.description, t.completed, t.created_at, t.updated_at,
-                 json_agg(json_build_object('id', u.id, 'name', u.name)) AS owners
-          FROM tasks t
-          JOIN task_owners task_owners_rel ON t.id = task_owners_rel.task_id
-          JOIN users u ON u.id = task_owners_rel.user_id
-          WHERE task_owners_rel.user_id = ${userId}
-          GROUP BY t.id
-        `;
-      } else {
-        console.log('Fetching all tasks');
-        tasks = await this.sql`
-          SELECT t.id, t.description, t.completed, t.created_at, t.updated_at,
-                 json_agg(json_build_object('id', u.id, 'name', u.name)) AS owners
-          FROM tasks t
-          JOIN task_owners task_owners_rel ON t.id = task_owners_rel.task_id
-          JOIN users u ON u.id = task_owners_rel.user_id
-          GROUP BY t.id
-        `;
-      }
+      const tasks = await this.sql<TaskWithOwners[]>`
+        SELECT t.id, t.description, t.completed, t.created_at, t.updated_at,
+               json_agg(json_build_object('id', u.id, 'name', u.name)) AS owners
+        FROM tasks t
+        JOIN task_owners task_owners_rel ON t.id = task_owners_rel.task_id
+        JOIN users u ON u.id = task_owners_rel.user_id
+        ${userId ? this.sql`WHERE task_owners_rel.user_id = ${userId}` : this.sql``}
+        GROUP BY t.id
+      `;
       return tasks;
     } catch (error) {
       console.error('Error fetching tasks:', error);
@@ -54,14 +41,12 @@ export class TaskService {
     ownerIds: number[],
   ): Promise<TaskWithOwners> {
     try {
-      // Insert the new task into the tasks table
       const [newTask] = await this.sql`
         INSERT INTO tasks (description, completed)
         VALUES (${description}, false)
         RETURNING *
       `;
 
-      // Insert owners for this task into the task_owners table
       await Promise.all(
         ownerIds.map(
           (ownerId) =>
@@ -72,7 +57,6 @@ export class TaskService {
         ),
       );
 
-      // Fetch the new task along with its owners to return in the response
       const [taskWithOwners] = await this.sql`
         SELECT t.id, t.description, t.completed, t.created_at, t.updated_at,
                json_agg(json_build_object('id', u.id, 'name', u.name)) AS owners
@@ -82,7 +66,6 @@ export class TaskService {
         WHERE t.id = ${newTask.id}
         GROUP BY t.id
       `;
-
       return taskWithOwners;
     } catch (error) {
       console.error('Error creating task:', error);
@@ -90,25 +73,22 @@ export class TaskService {
     }
   }
 
-  // Update the completion status of a task by ID and return the updated task
+  // Update the completion status of a task by ID
   async updateTaskStatus(
     taskId: number,
-    userId: number, // will update this with jwt token user id
+    userId: number,
     completed: boolean,
   ): Promise<{ message: string }> {
     try {
-      // Check if the user is an owner of the task
       const ownerCheck = await this.sql`
         SELECT * FROM task_owners
         WHERE task_id = ${taskId} AND user_id = ${userId}
       `;
 
       if (ownerCheck.length === 0) {
-        // User is not an owner, so deny the update
         throw new Error('User is not authorized to update this task');
       }
 
-      // Update the task's completed status
       await this.sql`
         UPDATE tasks
         SET completed = ${completed}
@@ -124,12 +104,14 @@ export class TaskService {
     }
   }
 
-  // Delete a task by ID and return the deleted task
+  // Delete a task by ID
   async deleteTask(
     taskId: number,
-    userId: number, // will update this with jwt token user id
+    userId: number,
   ): Promise<{ message: string }> {
     try {
+      console.log('Deleting task with ID:', taskId, 'for user ID:', userId); // Add this line to log values
+
       // Check if the user is an owner of the task
       const ownerCheck = await this.sql`
         SELECT * FROM task_owners
@@ -137,7 +119,6 @@ export class TaskService {
       `;
 
       if (ownerCheck.length === 0) {
-        // User is not an owner, so deny deletion
         throw new Error('User is not authorized to delete this task');
       }
 
