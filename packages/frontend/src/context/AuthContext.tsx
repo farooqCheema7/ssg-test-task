@@ -7,10 +7,18 @@ import React, {
   ReactNode,
 } from 'react';
 import { useRouter } from 'next/router';
+import { jwtDecode } from 'jwt-decode';
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
 
 interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
+  user: User | null;
   login: (token: string) => void;
   logout: () => void;
 }
@@ -21,36 +29,56 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({
-  children,
-}): React.ReactElement => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    // Check for token in localStorage on initial load
+    // Check for token and decode user data if available
     const token = localStorage.getItem('token');
     if (token) {
-      setIsAuthenticated(true);
+      const decodedUser = decodeToken(token);
+      console.log('decodedUser', decodedUser);
+      if (decodedUser) {
+        setUser(decodedUser);
+        setIsAuthenticated(true);
+      }
     }
-    setLoading(false); // Set loading to false after checking
+    setLoading(false);
   }, []);
+
+  const decodeToken = (token: string): User | null => {
+    try {
+      return jwtDecode<User>(token); // Decode and return the user data
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      return null;
+    }
+  };
 
   const login = (token: string) => {
     localStorage.setItem('token', token);
-    setIsAuthenticated(true);
-    router.push('/dashboard'); // Redirect to dashboard after login
+    const decodedUser = decodeToken(token);
+    if (decodedUser) {
+      setUser(decodedUser);
+      setIsAuthenticated(true);
+    }
+    router.push('/dashboard');
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     setIsAuthenticated(false);
-    router.push('/login'); // Redirect to login page after logout
+    setUser(null);
+    router.push('/login');
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{ isAuthenticated, loading, user, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -9,16 +9,15 @@ import {
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import TaskList from '../components/TaskList';
-import { Add } from '@mui/icons-material';
+import { Add, Logout } from '@mui/icons-material';
 import AddTaskDialog from '@/components/AddTaskDialog';
 import { Task } from '@/types/tasks';
 
 const Dashboard = () => {
-  const { logout } = useAuth();
-
+  const { logout, user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showOwnedOnly, setShowOwnedOnly] = useState(false);
-  const [openDialog, setOpenDialog] = useState(false); // State to manage dialog open/close
+  const [openDialog, setOpenDialog] = useState(false);
 
   useEffect(() => {
     // Fetch tasks from the backend
@@ -55,7 +54,7 @@ const Dashboard = () => {
     setOpenDialog(false);
   };
 
-  const handleTaskAdded = (newTask: any) => {
+  const handleTaskAdded = (newTask: Task) => {
     setTasks((prevTasks) => [...prevTasks, newTask]);
   };
 
@@ -76,9 +75,11 @@ const Dashboard = () => {
           alignItems="end"
           flexDirection="column"
         >
-          <Typography variant="h5">John Doe</Typography>
-          <Typography variant="body2">johndoe@email.com</Typography>
-          <Button color="primary" onClick={handleLogout}>
+          <Typography variant="h5">{user?.name || 'User'}</Typography>
+          <Typography variant="body2">
+            {user?.email || 'user@example.com'}
+          </Typography>
+          <Button color="primary" onClick={handleLogout} endIcon={<Logout />}>
             Sign out
           </Button>
         </Box>

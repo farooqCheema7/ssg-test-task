@@ -23,7 +23,7 @@ const Login: React.FC = () => {
         password,
       });
 
-      const token = response.data.token;
+      const token = response.data.access_token;
       login(token); // Call login from context to handle token storage and redirect
     } catch (err) {
       console.error('Login failed:', err);

@@ -25,7 +25,7 @@ export class AuthService {
     // Check if user exists and verify password directly (no hashing)
     const user = users[0];
     if (user && password === user.password) { // Plaintext password comparison
-      const payload = { email: user.email, sub: user.id };
+      const payload = { email: user.email, sub: user.id, name: user.name };
       return this.jwtService.sign(payload);
     }
     
