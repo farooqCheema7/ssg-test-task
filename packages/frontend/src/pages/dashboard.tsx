@@ -10,11 +10,15 @@ import {
 import { useAuth } from '../context/AuthContext';
 import TaskList from '../components/TaskList';
 import { Add } from '@mui/icons-material';
+import AddTaskDialog from '@/components/AddTaskDialog';
+import { Task } from '@/types/tasks';
 
 const Dashboard = () => {
-  const { isAuthenticated, logout } = useAuth();
-  const [tasks, setTasks] = useState([]);
+  const { logout } = useAuth();
+
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [showOwnedOnly, setShowOwnedOnly] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false); // State to manage dialog open/close
 
   useEffect(() => {
     // Fetch tasks from the backend
@@ -41,6 +45,18 @@ const Dashboard = () => {
 
   const handleLogout = () => {
     logout();
+  };
+
+  const handleOpenDialog = () => {
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
+  const handleTaskAdded = (newTask: any) => {
+    setTasks((prevTasks) => [...prevTasks, newTask]);
   };
 
   return (
@@ -84,9 +100,21 @@ const Dashboard = () => {
         <TaskList tasks={tasks} showOwnedOnly={showOwnedOnly} />
       </Box>
 
-      <Button startIcon={<Add />} fullWidth>
+      <Button
+        startIcon={<Add />}
+        fullWidth
+        onClick={handleOpenDialog}
+        sx={{ mt: 2 }}
+      >
         Add Task
       </Button>
+
+      {/* Add Task Dialog */}
+      <AddTaskDialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        onTaskAdded={handleTaskAdded}
+      />
     </Box>
   );
 };
