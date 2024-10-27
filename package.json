@@ -29,5 +29,10 @@
     "prettier-plugin-embed": "^0.4.15",
     "prettier-plugin-sql": "^0.18.1"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
+    "@mui/icons-material": "^6.1.5",
+    "@mui/material": "^6.1.5"
+  }
 }

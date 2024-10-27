@@ -12,10 +12,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <Box
         sx={{
           minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
           padding: 2,
         }}
       >

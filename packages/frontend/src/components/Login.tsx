@@ -39,6 +39,7 @@ const Login: React.FC = () => {
       justifyContent="center"
       height="100vh"
       width={600}
+      margin="auto"
     >
       <Typography variant="h6" mb={2}>
         Log in
