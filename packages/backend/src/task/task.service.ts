@@ -17,15 +17,38 @@ export class TaskService {
   }
 
   // Retrieve tasks, optionally filtering by userId
-  async getTasks(userId?: number): Promise<TaskWithOwners[]> {
+  async getTasks(userId: number, ownedOnly = false): Promise<TaskWithOwners[]> {
     try {
       const tasks = await this.sql<TaskWithOwners[]>`
-        SELECT t.id, t.description, t.completed, t.created_at, t.updated_at,
-               json_agg(json_build_object('id', u.id, 'name', u.name)) AS owners
-        FROM tasks t
-        JOIN task_owners task_owners_rel ON t.id = task_owners_rel.task_id
-        JOIN users u ON u.id = task_owners_rel.user_id
-        ${userId ? this.sql`WHERE task_owners_rel.user_id = ${userId}` : this.sql``}
+        SELECT
+          t.id,
+          t.description,
+          t.completed,
+          t.created_at,
+          t.updated_at,
+          json_agg(json_build_object('id', u.id, 'name', u.name)) AS owners
+        FROM
+          tasks t
+          JOIN task_owners task_owners_rel ON t.id = task_owners_rel.task_id
+          JOIN users u ON u.id = task_owners_rel.user_id
+        WHERE ${
+          ownedOnly
+            ? this.sql`
+              t.id IN (
+                SELECT task_id
+                FROM task_owners
+                GROUP BY task_id
+                HAVING COUNT(*) = 1 AND MAX(user_id) = ${userId}
+              )
+            `
+            : this.sql`
+              t.id IN (
+                SELECT task_id
+                FROM task_owners
+                WHERE user_id = ${userId}
+              )
+            `
+        }
         GROUP BY t.id
       `;
       return tasks;

@@ -28,22 +28,16 @@ export class TaskController {
 
   private extractUserIdFromToken(req: Request): number {
     const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      throw new InternalServerErrorException('Authorization header missing');
-    }
-    const token = authHeader.split(' ')[1];
+    const token = authHeader?.split(' ')[1];
     const decoded = this.jwtService.decode(token) as { id: number };
     return decoded.id;
   }
 
   @Get()
-  async getTasks(
-    @Req() req: Request,
-    @Query('ownedOnly') ownedOnly: string, // Query parameter for conditional fetching
-  ) {
+  async getTasks(@Req() req: Request, @Query('ownedOnly') ownedOnly: string) {
     const userId = this.extractUserIdFromToken(req);
-    const fetchOwnedOnly = ownedOnly === 'true'; // Convert query param to boolean
-    return this.taskService.getTasks(fetchOwnedOnly ? userId : undefined);
+    const fetchOwnedOnly = ownedOnly === 'true';
+    return this.taskService.getTasks(userId, fetchOwnedOnly);
   }
 
   @Post()

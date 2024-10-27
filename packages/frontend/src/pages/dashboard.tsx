@@ -19,27 +19,36 @@ const Dashboard = () => {
   const [showOwnedOnly, setShowOwnedOnly] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
 
-  useEffect(() => {
-    // Fetch tasks from the backend
-    const fetchTasks = async () => {
-      try {
-        const response = await fetch('http://localhost:4000/tasks', {
+  const fetchTasks = async (ownedOnly = false) => {
+    try {
+      const response = await fetch(
+        `http://localhost:4000/tasks${ownedOnly ? '?ownedOnly=true' : ''}`,
+        {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
-        });
-        const data = await response.json();
-        setTasks(data);
-      } catch (error) {
-        console.error('Error fetching tasks:', error);
-      }
-    };
+        },
+      );
+      const data = await response.json();
+      setTasks(data);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
+  };
 
+  useEffect(() => {
+    // Initially fetch all tasks
     fetchTasks();
   }, []);
 
-  const handleFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setShowOwnedOnly(event.target.checked);
+  const handleFilterChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const isChecked = event.target.checked;
+    setShowOwnedOnly(isChecked);
+
+    // Fetch tasks based on filter selection
+    fetchTasks(isChecked);
   };
 
   const handleLogout = () => {
@@ -56,6 +65,53 @@ const Dashboard = () => {
 
   const handleTaskAdded = (newTask: Task) => {
     setTasks((prevTasks) => [...prevTasks, newTask]);
+  };
+
+  const handleDelete = async (taskId: number) => {
+    try {
+      fetch(`http://localhost:4000/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      }).then((res) => {
+        if (!res.ok) {
+          throw new Error('Failed to delete task');
+        }
+        setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId));
+      });
+
+      // Update tasks list after deletion
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
+  };
+
+  const handleToggleComplete = async (
+    taskId: number,
+    currentStatus: boolean,
+  ) => {
+    try {
+      fetch(`http://localhost:4000/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ completed: !currentStatus }),
+      }).then((res) => {
+        if (!res.ok) {
+          throw new Error('Failed to update task status');
+        }
+        setTasks((prevTasks) =>
+          prevTasks.map((task) =>
+            task.id === taskId ? { ...task, completed: !currentStatus } : task,
+          ),
+        );
+      });
+    } catch (error) {
+      console.error('Error toggling task status:', error);
+    }
   };
 
   return (
@@ -98,7 +154,12 @@ const Dashboard = () => {
       </Box>
 
       <Box width="100%">
-        <TaskList tasks={tasks} showOwnedOnly={showOwnedOnly} />
+        <TaskList
+          tasks={tasks}
+          showOwnedOnly={showOwnedOnly}
+          handleDelete={handleDelete}
+          handleToggleComplete={handleToggleComplete}
+        />
       </Box>
 
       <Button
