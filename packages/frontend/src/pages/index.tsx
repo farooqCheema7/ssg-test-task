@@ -1,17 +1,47 @@
+// pages/index.tsx
 import { NextPage } from 'next';
-import classNames from 'classnames';
+import { useRouter } from 'next/router';
+import { useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { CircularProgress, Box, Typography } from '@mui/material';
 
 const Home: NextPage = () => {
+  const router = useRouter();
+  const { isAuthenticated, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading) {
+      if (isAuthenticated) {
+        router.push('/dashboard'); // Redirect to dashboard if authenticated
+      } else {
+        router.push('/login'); // Redirect to login if not authenticated
+      }
+    }
+  }, [isAuthenticated, loading, router]);
+
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        height="100vh"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <main
-      className={classNames(
-        'h-full',
-        'w-full',
-        'flex',
-        'items-center, justify-center',
-      )}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+      }}
     >
-      Welcome to the SSG test task
+      <Typography variant="h4">Redirecting...</Typography>
     </main>
   );
 };
